@@ -58,6 +58,33 @@ inline double dist(double x1, double y1, double x2, double y2) {
   return sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
 }
 
+/*
+* Transform observations to map coordinates
+*/
+inline double * transformToMap(double x_part, double y_part, double theta, double x_obs, double y_obs){
+  static double xy_map[2];
+  xy_map[0] = x_part + (cos(theta) * x_obs) - (sin(theta) * y_obs);
+  xy_map[1] = y_part + (sin(theta) * x_obs) + (cos(theta) * y_obs);
+  return xy_map;
+}
+
+inline double calculateWeight(double x_obs, double y_obs, double mu_x, double mu_y,
+                              double sig_x, double sig_y) {
+  double gauss_norm, exponent, weight;
+
+  // calculate exponent
+  exponent = (pow(x_obs - mu_x, 2) / (2 * pow(sig_x, 2)))
+               + (pow(y_obs - mu_y, 2) / (2 * pow(sig_y, 2)));
+
+  // calculate normalization term
+  gauss_norm = 1 / (2 * M_PI * sig_x * sig_y);
+  
+  // calculate weight
+  weight = gauss_norm * exp(-exponent);
+
+  return weight;
+}
+
 /**
  * Computes the error between ground truth and particle filter data.
  * @param (gt_x, gt_y, gt_theta) x, y and theta of ground truth
