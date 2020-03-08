@@ -37,6 +37,8 @@ int main() {
   // Landmark measurement uncertainty [x [m], y [m]]
   double sigma_landmark [2] = {0.3, 0.3};
 
+  // int step = 0;
+
   // Read map data
   Map map;
   if (!read_map_data("../data/map_data.txt", map)) {
@@ -60,7 +62,6 @@ int main() {
         auto j = json::parse(s);
 
         string event = j[0].get<string>();
-        
         if (event == "telemetry") {
           // j[1] is the data JSON object
           if (!pf.initialized()) {
@@ -77,6 +78,7 @@ int main() {
             double previous_yawrate = std::stod(j[1]["previous_yawrate"].get<string>());
             // std::cout << "prediction: " << delta_t << ", " << sigma_pos << ", " << previous_velocity << ", " << previous_yawrate << std::endl;
             pf.prediction(delta_t, sigma_pos, previous_velocity, previous_yawrate);
+            // step++;
           }
 
           // receive noisy observation data from the simulator
@@ -118,17 +120,20 @@ int main() {
           double highest_weight = -1.0;
           Particle best_particle;
           double weight_sum = 0.0;
+          std::cout << "num_particles " << num_particles << std::endl;
           for (int i = 0; i < num_particles; ++i) {
             if (particles[i].weight > highest_weight) {
               highest_weight = particles[i].weight;
               best_particle = particles[i];
             }
-
             weight_sum += particles[i].weight;
           }
 
+          // std::cout << "step: " << step << std::endl;
+          std::cout << "x" << best_particle.x << std::endl;
+          std::cout << "y" << best_particle.y << std::endl;
           std::cout << "highest w " << highest_weight << std::endl;
-          std::cout << "average w " << weight_sum/num_particles << std::endl;
+          std::cout << "average w " << weight_sum/num_particles << std::endl << std::endl;
 
           json msgJson;
           msgJson["best_particle_x"] = best_particle.x;

@@ -130,6 +130,8 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
    */
   vector<LandmarkObs> predicted_landmarks;
   vector<LandmarkObs> map_observations;
+  vector<double> sense_x;
+  vector<double> sense_y;
   vector<int> associations;
 
   Particle p;
@@ -175,6 +177,8 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
     dataAssociation(predicted_landmarks, map_observations);
     weight = 1.0;
     associations.clear();
+    sense_x.clear();
+    sense_y.clear();
     for (int j = 0; j < map_observations.size(); j++){
       assoc = map_observations[j].id;
       // std::cout << "post assoc" << j << ", " << assoc << std::endl;
@@ -184,10 +188,13 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
       weight *= calculateWeight(map_observations[j].x, map_observations[j].y, mu_x, mu_y, 
                                 std_landmark[0], std_landmark[1]);
       associations.push_back(predicted_landmarks[assoc].id);
+      sense_x.push_back(map_observations[j].x);
+      sense_y.push_back(map_observations[j].y);
       // std::cout << "weight: " << weight << std::endl;
     }
     particles[i].weight = weight;
-    particles[i].associations = associations;
+    // particles[i].associations = associations;
+    SetAssociations(particles[i], associations, sense_x, sense_y);
     // std::cout << "weights: " << weight << std::endl;
     // std::cout << "map size: " << map_observations.size() << std::endl;
   }
