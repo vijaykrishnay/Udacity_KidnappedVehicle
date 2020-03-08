@@ -47,7 +47,7 @@ void ParticleFilter::init(double x, double y, double theta, double std[]) {
     p.weight = 1;
     particles.push_back(p);
   }
-
+  is_initialized = true;
 }
 
 void ParticleFilter::prediction(double delta_t, double std_pos[], 
@@ -75,11 +75,11 @@ void ParticleFilter::prediction(double delta_t, double std_pos[],
     theta_new = p.theta + yaw_rate*delta_t;
 
     // Add noise and set new particle positions
-    p.x = x_new + noise_x(gen);
-    p.y = y_new + noise_y(gen);
-    p.theta = theta_new + noise_theta(gen);
+    particles[i].x = x_new + noise_x(gen);
+    particles[i].y = y_new + noise_y(gen);
+    particles[i].theta = theta_new + noise_theta(gen);
   }
-  std::cout << "predicted" << std::endl;
+  // std::cout << "predicted" << std::endl;
 }
 
 void ParticleFilter::dataAssociation(vector<LandmarkObs> predicted, 
@@ -98,11 +98,12 @@ void ParticleFilter::dataAssociation(vector<LandmarkObs> predicted,
       dist_tmp = dist(observations[i].x, observations[i].y, predicted[j].x, predicted[j].y);
       if (j==0){
         min_dist = dist_tmp;
-        observations[i].id = predicted[j].id;
+        observations[i].id = j;
       }
       if (dist_tmp < min_dist){
         min_dist = dist_tmp;
-        observations[i].id = predicted[j].id;
+        // std::cout << i << ", " << j << ", " << dist_tmp << ", " << predicted[j].id << std::endl;
+        observations[i].id = j;
       }
       if (min_dist == 0){
         break; // best match found!
@@ -129,6 +130,8 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
    */
   vector<LandmarkObs> predicted_landmarks;
   vector<LandmarkObs> map_observations;
+  vector<int> associations;
+
   Particle p;
   LandmarkObs l;
   double *xy_vals;
@@ -138,12 +141,9 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
   for (int i = 0; i < num_particles; i++){
     p = particles[i];
     predicted_landmarks.clear();
+    map_observations.clear();
     
     // std::cout << "uw1" << std::endl;
-    std::cout << "obs size:" << observations.size() << std::endl;
-    std::cout << "map lmarks:" << map_landmarks.landmark_list.size() << std::endl;
-    
-
     // Transform observations to map coords based on particle position
     for (int j = 0; j < observations.size(); j++){
       xy_vals = transformToMap(p.x, p.y, p.theta, observations[j].x, observations[j].y);
@@ -151,6 +151,9 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
       l.x = xy_vals[0];
       l.y = xy_vals[1];
       map_observations.push_back(l);
+      // std::cout << "p vals: " << p.x << ", " << p.y << ", " << p.theta << std::endl;
+      // std::cout << "o vals: " << observations[j].x << ", " << observations[j].y << std::endl;
+      // std::cout << "l vals: " << l.x << ", " << l.y << std::endl;
     }
 
     // std::cout << "uw2" << std::endl;
@@ -160,21 +163,33 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
       l.x = map_landmarks.landmark_list[j].x_f;
       l.y = map_landmarks.landmark_list[j].y_f;
       predicted_landmarks.push_back(l);
+      // if (dist(p.x, p.y, l.x, l.y) < 2*sensor_range){
+      //   predicted_landmarks.push_back(l);
+      // }
     }
 
     // std::cout << "uw3" << std::endl;
     // associate ladmarks to observations
+    // std::cout << "map obs:" << map_observations.size() << std::endl;
+    // std::cout << "map lmarks:" << predicted_landmarks.size() << std::endl;
     dataAssociation(predicted_landmarks, map_observations);
     weight = 1.0;
+    associations.clear();
     for (int j = 0; j < map_observations.size(); j++){
       assoc = map_observations[j].id;
+      // std::cout << "post assoc" << j << ", " << assoc << std::endl;
+
       mu_x = predicted_landmarks[assoc].x;
       mu_y = predicted_landmarks[assoc].y;
       weight *= calculateWeight(map_observations[j].x, map_observations[j].y, mu_x, mu_y, 
                                 std_landmark[0], std_landmark[1]);
+      associations.push_back(predicted_landmarks[assoc].id);
+      // std::cout << "weight: " << weight << std::endl;
     }
-    p.weight = weight;
-    // std::cout << "uw3" << std::endl;
+    particles[i].weight = weight;
+    particles[i].associations = associations;
+    // std::cout << "weights: " << weight << std::endl;
+    // std::cout << "map size: " << map_observations.size() << std::endl;
   }
   // std::cout << "uw" << std::endl;
 }
@@ -187,8 +202,14 @@ void ParticleFilter::resample() {
    *   http://en.cppreference.com/w/cpp/numeric/random/discrete_distribution
    */
   vector<double> weights;
+  double weight_sum = 0.;
   for (int i = 0; i < particles.size(); i++){
-    weights.push_back(particles[i].weight);
+    weight_sum += particles[i].weight;
+  }
+  // std::cout << "weights sum" << weight_sum << std::endl;
+
+  for (int i = 0; i < particles.size(); i++){
+    weights.push_back(particles[i].weight/weight_sum);
   }
 
   std::default_random_engine generator;
@@ -202,11 +223,11 @@ void ParticleFilter::resample() {
     particles[i] = particles_new[random_sel];
   }
 
-  // Copy new particles back
-  for (int i = 0; i < particles.size(); i++){
-    particles[i] = particles_new[i];
-  }
-  std::cout << "resample" << std::endl;
+  // // Copy new particles back
+  // for (int i = 0; i < particles.size(); i++){
+  //   particles[i] = particles_new[i];
+  // }
+  // std::cout << "resample" << std::endl;
 }
 
 void ParticleFilter::SetAssociations(Particle& particle, 

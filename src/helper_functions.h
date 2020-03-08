@@ -15,6 +15,7 @@
 #include <string>
 #include <vector>
 #include "map.h"
+#include <iostream>
 
 // for portability of M_PI (Vis Studio, MinGW, etc.)
 #ifndef M_PI
@@ -71,6 +72,9 @@ inline double * transformToMap(double x_part, double y_part, double theta, doubl
 inline double calculateWeight(double x_obs, double y_obs, double mu_x, double mu_y,
                               double sig_x, double sig_y) {
   double gauss_norm, exponent, weight;
+  
+  // std::cout << "obs: " << x_obs << ", " << y_obs << std::endl;
+  // std::cout << "mu: " << mu_x << ", " << mu_y << std::endl;
 
   // calculate exponent
   exponent = (pow(x_obs - mu_x, 2) / (2 * pow(sig_x, 2)))
