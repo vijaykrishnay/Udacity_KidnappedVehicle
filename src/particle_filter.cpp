@@ -66,6 +66,9 @@ void ParticleFilter::prediction(double delta_t, double std_pos[],
   normal_distribution<double> noise_theta(0., std_pos[2]);
   double x_new, y_new, theta_new;
   Particle p;
+  if (yaw_rate == 0.){
+    yaw_rate = 1e-4; // take care of singulatiry
+  }
   for (int i = 0; i < num_particles; i++){
     p = particles[i];
 
@@ -140,9 +143,20 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
   double weight;
   int assoc;
   double mu_x, mu_y;
+  
+  // Extract landmarks to predicted landmarks (in Map Coords)
+  for (int j = 0; j < map_landmarks.landmark_list.size(); j++){
+    l.id = map_landmarks.landmark_list[j].id_i;
+    l.x = map_landmarks.landmark_list[j].x_f;
+    l.y = map_landmarks.landmark_list[j].y_f;
+    predicted_landmarks.push_back(l);
+    // if (dist(p.x, p.y, l.x, l.y) < 2*sensor_range){
+    //   predicted_landmarks.push_back(l);
+    // }
+  }
+
   for (int i = 0; i < num_particles; i++){
     p = particles[i];
-    predicted_landmarks.clear();
     map_observations.clear();
     
     // std::cout << "uw1" << std::endl;
@@ -153,24 +167,15 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
       l.x = xy_vals[0];
       l.y = xy_vals[1];
       map_observations.push_back(l);
+      if (xy_vals[0] != xy_vals[0]){
+        std::cout << "obs to transfrm: " << observations[j].x << ", " << observations[j].y << std::endl;
+        std::cout << "p: " << p.x << ", " << p.y << ", " << p.theta << std::endl;
+      }
       // std::cout << "p vals: " << p.x << ", " << p.y << ", " << p.theta << std::endl;
       // std::cout << "o vals: " << observations[j].x << ", " << observations[j].y << std::endl;
       // std::cout << "l vals: " << l.x << ", " << l.y << std::endl;
     }
 
-    // std::cout << "uw2" << std::endl;
-    // Extract landmarks to predicted landmarks (in Map Coords)
-    for (int j = 0; j < map_landmarks.landmark_list.size(); j++){
-      l.id = map_landmarks.landmark_list[j].id_i;
-      l.x = map_landmarks.landmark_list[j].x_f;
-      l.y = map_landmarks.landmark_list[j].y_f;
-      predicted_landmarks.push_back(l);
-      // if (dist(p.x, p.y, l.x, l.y) < 2*sensor_range){
-      //   predicted_landmarks.push_back(l);
-      // }
-    }
-
-    // std::cout << "uw3" << std::endl;
     // associate ladmarks to observations
     // std::cout << "map obs:" << map_observations.size() << std::endl;
     // std::cout << "map lmarks:" << predicted_landmarks.size() << std::endl;
@@ -198,7 +203,7 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
     // std::cout << "weights: " << weight << std::endl;
     // std::cout << "map size: " << map_observations.size() << std::endl;
   }
-  // std::cout << "uw" << std::endl;
+  // std::cout << "last wt: " << weight << std::endl;
 }
 
 void ParticleFilter::resample() {
@@ -229,12 +234,6 @@ void ParticleFilter::resample() {
     random_sel = distribution(generator);
     particles[i] = particles_new[random_sel];
   }
-
-  // // Copy new particles back
-  // for (int i = 0; i < particles.size(); i++){
-  //   particles[i] = particles_new[i];
-  // }
-  // std::cout << "resample" << std::endl;
 }
 
 void ParticleFilter::SetAssociations(Particle& particle, 

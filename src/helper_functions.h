@@ -85,7 +85,11 @@ inline double calculateWeight(double x_obs, double y_obs, double mu_x, double mu
   
   // calculate weight
   weight = gauss_norm * exp(-exponent);
-
+  if (weight != weight){
+    std::cout << "obs: " << x_obs << ", " << y_obs << std::endl;
+    std::cout << "mu: " << mu_x << ", " << mu_y << std::endl;
+    std::cout << "sig: " << sig_x << ", " << sig_y << std::endl;
+  }
   return weight;
 }
 

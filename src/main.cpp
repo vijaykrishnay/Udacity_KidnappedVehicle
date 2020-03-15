@@ -4,6 +4,7 @@
 #include <string>
 #include "json.hpp"
 #include "particle_filter.h"
+// #include <chrono>
 
 // for convenience
 using nlohmann::json;
@@ -63,6 +64,8 @@ int main() {
 
         string event = j[0].get<string>();
         if (event == "telemetry") {
+          // auto t0 = std::chrono::high_resolution_clock::now();
+          
           // j[1] is the data JSON object
           if (!pf.initialized()) {
             // Sense noisy position data from the simulator
@@ -80,6 +83,10 @@ int main() {
             pf.prediction(delta_t, sigma_pos, previous_velocity, previous_yawrate);
             // step++;
           }
+          
+          // auto t1 = std::chrono::high_resolution_clock::now();
+          // auto dt = 1.e-9*std::chrono::duration_cast<std::chrono::nanoseconds>(t1-t0).count();
+          // std::cout << "prediction time: " << dt << std::endl;
 
           // receive noisy observation data from the simulator
           // sense_observations in JSON format 
@@ -110,8 +117,16 @@ int main() {
           }
 
           // Update the weights and resample
-          pf.updateWeights(sensor_range, sigma_landmark, noisy_observations, map);
+          // auto t2 = std::chrono::high_resolution_clock::now();
+          pf.updateWeights(sensor_range, sigma_landmark, noisy_observations, map);          
+          // auto t3 = std::chrono::high_resolution_clock::now();
+          // auto dt2 = 1.e-9*std::chrono::duration_cast<std::chrono::nanoseconds>(t3-t2).count();
+          // std::cout << "update time: " << dt2 << std::endl;
+
           pf.resample();
+          // auto t4 = std::chrono::high_resolution_clock::now();
+          // auto dt3 = 1.e-9*std::chrono::duration_cast<std::chrono::nanoseconds>(t4-t3).count();
+          // std::cout << "resample time: " << dt3 << std::endl;
 
           // Calculate and output the average weighted error of the particle 
           //   filter over all time steps so far.
@@ -120,7 +135,7 @@ int main() {
           double highest_weight = -1.0;
           Particle best_particle;
           double weight_sum = 0.0;
-          std::cout << "num_particles " << num_particles << std::endl;
+          // std::cout << "num_particles " << num_particles << std::endl;
           for (int i = 0; i < num_particles; ++i) {
             if (particles[i].weight > highest_weight) {
               highest_weight = particles[i].weight;
@@ -130,10 +145,10 @@ int main() {
           }
 
           // std::cout << "step: " << step << std::endl;
-          std::cout << "x" << best_particle.x << std::endl;
-          std::cout << "y" << best_particle.y << std::endl;
-          std::cout << "highest w " << highest_weight << std::endl;
-          std::cout << "average w " << weight_sum/num_particles << std::endl << std::endl;
+          // std::cout << "x" << best_particle.x << std::endl;
+          // std::cout << "y" << best_particle.y << std::endl;
+          // std::cout << "highest w " << highest_weight << std::endl;
+          // std::cout << "average w " << weight_sum/num_particles << std::endl << std::endl;
 
           json msgJson;
           msgJson["best_particle_x"] = best_particle.x;
